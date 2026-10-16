@@ -24,6 +24,7 @@ This is the default mode when `NODE_ENV` is `production` or unset, and `SAAS_MOD
 - Billing is hidden, all features are unlimited
 - OIDC is available if configured, password login can be disabled once it is
 - Google OAuth is not available (self-hosted instances use OIDC instead)
+- `/robots.txt` asks search engines not to crawl any page, so your instance stays out of search results
 
 ### SaaS mode (`SAAS_MODE=true`)
 
@@ -162,6 +163,8 @@ A destination with a token that can no longer be decrypted fails every night wit
 There is no in-place way to re-encrypt a stored token with a new key. The only fix is to remove the affected destination in Settings and add it again with its access token, which encrypts it under the current `NEXTAUTH_SECRET`. Destinations with no access token (public ntfy topics) are unaffected, since there is nothing to decrypt.
 
 ## Value constraints and defaults
+
+A variable that is set but blank (`VAR=` in `.env`, or a field left empty in a template editor like Unraid's) is treated as not set, so it gets its default. The one exception is `DB_PASSWORD`, where an empty value means an empty password.
 
 Some variables are validated against a specific range or format at startup. If a value falls outside these bounds, the app falls back to the default rather than starting with an invalid value.
 
