@@ -91,9 +91,18 @@ export function generateOpenAPISpec(): OpenAPISpec {
             'Per-user personal API token sent as `Authorization: Bearer <token>`. ' +
             'Created and revoked in Settings → API Tokens. Read-only (`READ`) tokens are ' +
             'restricted to GET, HEAD, and OPTIONS; a write attempt returns 403. ' +
-            'Each endpoint lists the schemes it accepts: those showing only `session` ' +
-            'reject bearer tokens outright, which covers token management, billing, and ' +
+            'Each endpoint lists the schemes it accepts: those showing only `session` and `deviceSession` ' +
+            'reject API tokens outright, which covers token management, billing, and ' +
             'the CardDAV endpoints that read or replace stored server credentials.',
+        },
+        deviceSession: {
+          type: 'http',
+          scheme: 'bearer',
+          description:
+            'Native app access token (`ntsa_` prefix) sent as `Authorization: Bearer <token>`. ' +
+            'Obtained from POST /api/auth/native/login, valid for one hour, renewed with ' +
+            'POST /api/auth/native/refresh. A 401 with code `access_token_expired` means refresh ' +
+            'and retry. Accepted everywhere a browser session is.',
         },
       },
       schemas: sharedSchemas(),
@@ -461,6 +470,63 @@ export function generateOpenAPISpec(): OpenAPISpec {
               },
               required: ['version'],
             }),
+          },
+        },
+      },
+      '/api/server-info': {
+        get: {
+          tags: ['System'],
+          summary: 'Server capabilities',
+          description:
+            'Describes this server for native clients before sign-in: version, API version, ' +
+            'mode, login methods, registration status and optional features. ' +
+            'Clients must ignore unknown fields.',
+          responses: {
+            '200': jsonResponse('Server info', {
+              type: 'object',
+              properties: {
+                name: { type: 'string', enum: ['Nametag'] },
+                version: { type: 'string', example: '0.64.0' },
+                apiVersion: { type: 'integer', example: 1 },
+                mode: { type: 'string', enum: ['saas', 'selfhosted'] },
+                auth: {
+                  type: 'object',
+                  properties: {
+                    password: { type: 'boolean' },
+                    google: { type: 'boolean' },
+                    oidc: {
+                      type: 'object',
+                      properties: {
+                        enabled: { type: 'boolean' },
+                        name: { type: 'string', example: 'SSO' },
+                      },
+                      required: ['enabled', 'name'],
+                    },
+                    emailVerificationRequired: { type: 'boolean' },
+                    registration: {
+                      type: 'object',
+                      properties: {
+                        enabled: { type: 'boolean' },
+                        reason: { type: 'string', enum: ['passwordLoginDisabled', 'registrationDisabled'] },
+                      },
+                      required: ['enabled'],
+                    },
+                  },
+                  required: ['password', 'google', 'oidc', 'emailVerificationRequired', 'registration'],
+                },
+                features: {
+                  type: 'object',
+                  properties: {
+                    billing: { type: 'boolean' },
+                    cardDav: { type: 'boolean' },
+                    webPush: { type: 'boolean' },
+                  },
+                  required: ['billing', 'cardDav', 'webPush'],
+                },
+              },
+              required: ['name', 'version', 'apiVersion', 'mode', 'auth', 'features'],
+            }),
+            '503': resp('Database unavailable'),
           },
         },
       },
